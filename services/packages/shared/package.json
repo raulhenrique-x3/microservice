@@ -1,0 +1,26 @@
+{
+  "name": "@app/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Event contracts and shared infrastructure adapters (RabbitMQ, S3) used by api, worker and notifier.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "amqplib": "^2.2.0",
+    "dotenv": "^18.0.8",
+    "minio": "^8.0.7"
+  }
+}

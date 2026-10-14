@@ -1,0 +1,42 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum JobStatus {
+  PENDING
+  PROCESSING
+  DONE
+  ERRORED
+
+  @@map("job_status")
+}
+
+// Owned by the worker: claim, attempts and processing state. Replaces the
+// status/attempts columns the worker used to write in the API's database.
+model ProcessingJob {
+  jobId       String    @id
+  status      JobStatus @default(PROCESSING)
+  attempts    Int       @default(0)
+  errorDetail String?
+  claimedAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("processing_jobs")
+}
+
+model Outbox {
+  id          String    @id @default(cuid())
+  kind        String
+  payload     String
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([publishedAt])
+  @@map("outbox")
+}

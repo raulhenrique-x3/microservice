@@ -9,6 +9,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-converter}
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres/init:/docker-entrypoint-initdb.d:ro
     ports:
       - "5434:5432"
     healthcheck:
@@ -47,19 +48,21 @@ services:
       timeout: 5s
       retries: 10
 
-  buckets:
+  storage:
     image: pgsty/silo:${MINIO_VERSION:-latest}
     depends_on:
       minio:
         condition: service_healthy
-    entrypoint: >
-      sh -c "
-        until mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin}; do sleep 1; done;
-        mc mb --ignore-existing local/uploads;
-        mc mb --ignore-existing local/converted;
-        echo 'buckets ok';
-        tail -f /dev/null
-      "
+    entrypoint: /init/init.sh
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_API_PASSWORD: ${MINIO_API_PASSWORD:-api-secret}
+      MINIO_WORKER_PASSWORD: ${MINIO_WORKER_PASSWORD:-worker-secret}
+      MINIO_NOTIFIER_PASSWORD: ${MINIO_NOTIFIER_PASSWORD:-notifier-secret}
+    volumes:
+      - ./docker/storage:/init:ro
+    # one least-privilege S3 user per service; keep alive so depends_on works
 
   mailpit:
     image: axllent/mailpit:${MAILPIT_VERSION:-latest}
@@ -70,18 +73,18 @@ services:
       - "8025:8025"
 
   api:
-    image: mediaconverter-app:latest
+    image: mediaconverter-api:latest
     build:
-      context: ./back-end
-      dockerfile: ../docker/backend.Dockerfile
+      context: .
+      dockerfile: docker/api.Dockerfile
     command: sh -c "npx prisma migrate deploy && node dist/main.js"
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-converter}:${POSTGRES_PASSWORD:-converter}@postgres:5432/${POSTGRES_DB:-converter}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-converter}:${POSTGRES_PASSWORD:-converter}@postgres:5432/converter_api
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       MINIO_ENDPOINT: minio
       MINIO_PORT: "9000"
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_ACCESS_KEY: api
+      MINIO_SECRET_KEY: ${MINIO_API_PASSWORD:-api-secret}
       PORT: ${API_PORT:-3000}
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-200}
       MAX_ATTEMPTS: ${MAX_ATTEMPTS:-3}
@@ -95,20 +98,23 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-      buckets:
+      storage:
         condition: service_started
     restart: unless-stopped
 
   worker:
-    image: mediaconverter-app:latest
-    command: node dist/worker.js
+    image: mediaconverter-worker:latest
+    build:
+      context: .
+      dockerfile: docker/worker.Dockerfile
+    command: sh -c "npx prisma migrate deploy && node dist/worker.js"
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-converter}:${POSTGRES_PASSWORD:-converter}@postgres:5432/${POSTGRES_DB:-converter}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-converter}:${POSTGRES_PASSWORD:-converter}@postgres:5432/converter_worker
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       MINIO_ENDPOINT: minio
       MINIO_PORT: "9000"
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_ACCESS_KEY: worker
+      MINIO_SECRET_KEY: ${MINIO_WORKER_PASSWORD:-worker-secret}
       MAX_ATTEMPTS: ${MAX_ATTEMPTS:-3}
     depends_on:
       postgres:
@@ -117,20 +123,23 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
-      buckets:
+      storage:
         condition: service_started
     restart: unless-stopped
 
   notifier:
-    image: mediaconverter-app:latest
-    command: node dist/notifier.js
+    image: mediaconverter-notifier:latest
+    build:
+      context: .
+      dockerfile: docker/notifier.Dockerfile
+    command: sh -c "npx prisma migrate deploy && node dist/notifier.js"
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-converter}:${POSTGRES_PASSWORD:-converter}@postgres:5432/${POSTGRES_DB:-converter}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-converter}:${POSTGRES_PASSWORD:-converter}@postgres:5432/converter_notifier
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
       MINIO_ENDPOINT: minio
       MINIO_PORT: "9000"
-      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_ACCESS_KEY: notifier
+      MINIO_SECRET_KEY: ${MINIO_NOTIFIER_PASSWORD:-notifier-secret}
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
       PRESIGN_EXPIRY_SECONDS: ${PRESIGN_EXPIRY_SECONDS:-1800}
@@ -141,6 +150,8 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      storage:
+        condition: service_started
     restart: unless-stopped
 
   frontend:

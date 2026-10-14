@@ -1,0 +1,18 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Owned by the notifier: dedupe ledger. Replaces the notifiedAt claim column
+// the notifier used to write in the API's database.
+model NotifiedJob {
+  jobId      String   @id
+  notifiedAt DateTime @default(now())
+
+  @@map("notified_jobs")
+}

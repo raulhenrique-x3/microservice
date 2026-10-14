@@ -1,0 +1,61 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ASCII-safe enum values; wire mapping to PENDENTE/PROCESSANDO/CONCLUÍDO/ERRO
+// happens in src/media/media.ts (wireStatus).
+enum JobStatus {
+  PENDING
+  PROCESSING
+  DONE
+  ERRORED
+
+  @@map("job_status")
+}
+
+// Owned by the API: intake metadata + original status. resultKey/errorDetail/
+// attempts/notifiedAt moved to the owning services (worker / notifier).
+model Job {
+  id           String    @id @default(uuid())
+  status       JobStatus @default(PENDING)
+  originalKey  String
+  originalName String
+  originalSize Int
+  sourceType   String
+  sourceFormat String
+  targetFormat String
+  notifyEmail  String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("jobs")
+}
+
+// Read model fed by worker events (event-carried state transfer). No FK on
+// purpose: cross-service data stays decoupled.
+model JobView {
+  jobId       String    @id
+  status      JobStatus @default(PENDING)
+  resultKey   String?
+  errorDetail String?
+  updatedAt   DateTime  @updatedAt
+
+  @@map("job_views")
+}
+
+model Outbox {
+  id          String    @id @default(cuid())
+  kind        String
+  payload     String
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([publishedAt])
+  @@map("outbox")
+}
