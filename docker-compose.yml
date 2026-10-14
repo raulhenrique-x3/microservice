@@ -86,13 +86,13 @@ services:
       MINIO_PORT: "9000"
       MINIO_ACCESS_KEY: api
       MINIO_SECRET_KEY: ${MINIO_API_PASSWORD:-api-secret}
-      MINIO_PRESIGN_HOST: localhost
-      PORT: ${API_PORT:-3000}
+      MINIO_PRESIGN_HOST: ${MINIO_PRESIGN_HOST:-localhost}
+      PORT: 3000
       MAX_UPLOAD_MB: ${MAX_UPLOAD_MB:-200}
       MAX_ATTEMPTS: ${MAX_ATTEMPTS:-3}
       PRESIGN_EXPIRY_SECONDS: ${PRESIGN_EXPIRY_SECONDS:-1800}
     ports:
-      - "3000:3000"
+      - "${API_PORT:-3000}:3000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -144,7 +144,7 @@ services:
       MINIO_PORT: "9000"
       MINIO_ACCESS_KEY: notifier
       MINIO_SECRET_KEY: ${MINIO_NOTIFIER_PASSWORD:-notifier-secret}
-      MINIO_PRESIGN_HOST: localhost
+      MINIO_PRESIGN_HOST: ${MINIO_PRESIGN_HOST:-localhost}
       SMTP_HOST: mailpit
       SMTP_PORT: "1025"
       PRESIGN_EXPIRY_SECONDS: ${PRESIGN_EXPIRY_SECONDS:-1800}
@@ -168,7 +168,7 @@ services:
     # stabilizes.
     command: npm run dev -- --host 0.0.0.0 --port 3000
     environment:
-      VITE_API_URL: http://localhost:3000
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:${API_PORT:-3000}}
     ports:
       - "${FRONTEND_PORT:-5173}:3000"
     depends_on:

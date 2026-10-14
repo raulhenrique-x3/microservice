@@ -37,6 +37,7 @@ function Home() {
   const [error, setError] = useState('')
   const [job, setJob] = useState<JobView | null>(null)
   const timer = useRef<ReturnType<typeof setInterval>>()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => () => clearInterval(timer.current), [])
 
@@ -98,11 +99,20 @@ function Home() {
           <label className="block">
             <span className="text-sm font-medium text-slate-600">Arquivo</span>
             <input
+              ref={fileInputRef}
               type="file"
+              onClick={(e) => {
+                e.currentTarget.value = ''
+              }}
               onChange={(e) => setFile(e.target.files?.[0])}
               className="mt-1 w-full text-sm file:mr-2 file:rounded file:border-0 file:bg-slate-800 file:px-3 file:py-1 file:text-white"
             />
           </label>
+          {file && (
+            <p className="text-xs text-slate-500">
+              Selecionado: {file.name} ({(file.size / 1024).toFixed(0)} KB)
+            </p>
+          )}
 
           <label className="block">
             <span className="text-sm font-medium text-slate-600">
