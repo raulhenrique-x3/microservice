@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ASCII-safe enum values; wire mapping to PENDENTE/PROCESSANDO/CONCLUÍDO/ERRO
+// happens in src/media/media.ts (wireStatus).
+enum JobStatus {
+  PENDING
+  PROCESSING
+  DONE
+  ERRORED
+
+  @@map("job_status")
+}
+
+model Job {
+  id           String    @id @default(uuid())
+  status       JobStatus @default(PENDING)
+  originalKey  String
+  originalName String
+  originalSize Int
+  sourceType   String
+  sourceFormat String
+  targetFormat String
+  notifyEmail  String
+  resultKey    String?
+  errorDetail  String?
+  attempts     Int       @default(0)
+  notifiedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@map("jobs")
+}
+
+model Outbox {
+  id          String    @id @default(cuid())
+  kind        String
+  payload     String
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([publishedAt])
+  @@map("outbox")
+}
