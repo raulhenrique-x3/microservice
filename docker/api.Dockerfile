@@ -17,6 +17,7 @@ COPY services/apps/notifier/package.json apps/notifier/package.json
 RUN npm ci --no-audit --no-fund
 
 # only this service's code + the shared library it imports
+COPY services/tsconfig.base.json tsconfig.base.json
 COPY services/packages/shared packages/shared
 COPY services/apps/api apps/api
 RUN npm run build -w @app/shared && npm run generate -w @app/api && npm run build -w @app/api

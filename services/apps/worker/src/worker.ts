@@ -59,6 +59,7 @@ export async function startWorker() {
   const outbox = app.get(OutboxRelay);
   await Promise.all([minio.ensureBucket(BUCKETS.upload), minio.ensureBucket(BUCKETS.converted)]);
   outbox.channel = await connectRabbit();
+  outbox.start();
 
   outbox.channel!.consume(EX.JOBS_QUEUE, async (msg) => {
     if (!msg) return;
@@ -122,7 +123,7 @@ export async function startWorker() {
       await prisma.$transaction(async (tx) => {
         await tx.processingJob.update({
           where: { jobId: payload.jobId },
-          data: { status: 'DONE', resultKey, errorDetail: null },
+          data: { status: 'DONE', errorDetail: null },
         });
         const completed: ConversionCompleted = {
           eventId: randomUUID(),

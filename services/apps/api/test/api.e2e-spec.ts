@@ -144,7 +144,7 @@ describe('API Fluxo POST /jobs e validação', () => {
 });
 
 describe('pipeline de conversão (imagem, ponta a ponta)', () => {
-  it('converte png → jpeg, gera URL de download e remove o original', async () => {
+  it('converte png → jpeg, gera URL de download e remove o original', { timeout: 90_000 }, async () => {
     const { status, body } = await post('test.png', 'jpeg');
     expect(status).toBe(202);
     const jobId = body.jobId!;

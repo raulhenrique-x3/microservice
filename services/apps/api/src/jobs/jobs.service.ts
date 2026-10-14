@@ -14,7 +14,7 @@ export class JobsService {
 
   async create(file: Express.Multer.File, targetFormat: string, notifyEmail: string) {
     if (!file) throw new BadRequestException('arquivo obrigatório');
-    const max = Number(process.env.MAX_UPLOAD_MB || 200) * 1024 * 1024;
+    const max = Number(process.env.MAX_UPLOAD_MB || 200) * 1024 * 1024; // 200 MB default
     if (file.size > max) throw new BadRequestException(`arquivo maior que ${process.env.MAX_UPLOAD_MB || 200} MB`);
 
     const detected = detectMediaType(file.buffer); // real type from magic bytes
