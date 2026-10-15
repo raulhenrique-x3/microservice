@@ -22,7 +22,7 @@ Frontend (React) ──HTTP multipart──▶ API ──outbox──▶ RabbitM
 | `postgres` | **um database por serviço** (database-per-service) | — | — | 5434 |
 | `rabbitmq` | filas `media.convert` / eventos topic `media.events` / DLQ `media.dead` | — | — | 5672 / **15672 (UI)** |
 | `minio` | buckets `uploads` (dono: api) e `converted` (dono: worker) | — | — | 9000 / **9001 (UI)** |
-| `storage` | bootstrap: buckets + **usuário S3 com policy mínima por serviço** | — | — | — |
+| `storage` | bootstrap (roda uma vez): buckets + **usuário S3 com policy mínima por serviço**; erro ao criar usuário faz o bootstrap **falhar alto** (não sobe stack com credencial quebrada) | — | — | — |
 | `mailpit` | SMTP fake + caixa de entrada | — | — | 1025 / **8025 (UI)** |
 
 > **Nota sobre MinIO:** as imagens oficiais do MinIO foram retiradas de todos os registros públicos em 09/2026. O projeto usa `pgsty/silo` — fork binário-compatível com MinIO CE (mesma API S3, mesmo `mc`, mesmas variáveis de ambiente). Para trocar por MinIO real, basta ajustar `image:` no `docker-compose.yml`.
@@ -51,6 +51,8 @@ docker compose up --build # primeira vez: cria os 3 databases via init script
 - RabbitMQ UI: <http://localhost:15672> (guest/guest)
 - MinIO UI: <http://localhost:9001> (minioadmin/minioadmin)
 - Mailpit: <http://localhost:8025>
+
+> Portas e hosts interpolados de `.env` (`API_PORT`, `MINIO_PRESIGN_HOST`, `VITE_API_URL`…): mudando o `.env`, recrie o contêiner afetado (`docker compose up -d` recria o que mudou).
 
 Escalar workers (uma fila compartilhada, *competing consumers*):
 

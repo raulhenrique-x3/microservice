@@ -62,7 +62,7 @@ services:
       MINIO_NOTIFIER_PASSWORD: ${MINIO_NOTIFIER_PASSWORD:-notifier-secret}
     volumes:
       - ./docker/storage:/init:ro
-    # one least-privilege S3 user per service; keep alive so depends_on works
+    # one least-privilege S3 user per service; runs once (script exits 0)
 
   mailpit:
     image: axllent/mailpit:${MAILPIT_VERSION:-latest}
