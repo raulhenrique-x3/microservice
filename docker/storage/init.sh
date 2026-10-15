@@ -10,7 +10,10 @@ echo 'buckets ok'
 
 make_user() {
   # $1 user, $2 password env var value; policy file mounted at /init/policy-$1.json
-  mc admin user add local "$1" "$2" >/dev/null 2>&1 || true
+  mc admin user add local "$1" "$2" || {
+    echo "ERROR: failed to create user $1 (check password length >= 8)" >&2
+    exit 1
+  }
   mc admin policy remove local "p-$1" >/dev/null 2>&1 || true
   mc admin policy create local "p-$1" "/init/policy-$1.json" || true
   mc admin policy attach local "p-$1" --user "$1" || true
